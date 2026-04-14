@@ -11,7 +11,7 @@
 [![benchmark](https://img.shields.io/badge/MRLVAL%20benchmark-165%2F165-brightgreen)]()
 [![zero deps](https://img.shields.io/badge/runtime%20deps-1-blue)]()
 [![typescript](https://img.shields.io/badge/TypeScript-strict-blue)]()
-[![license](https://img.shields.io/badge/license-MIT-green)]()
+[![license](https://img.shields.io/badge/license-Apache%202.0-green)]()
 
 </div>
 
@@ -503,7 +503,7 @@ npm run build       # Build ESM + CJS + types
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+Apache License 2.0 — see [LICENSE](./LICENSE).
 
 ---
 
