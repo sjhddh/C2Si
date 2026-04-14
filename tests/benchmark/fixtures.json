@@ -1,0 +1,470 @@
+{
+  "version": "c2si-benchmark-v0.1",
+  "description": "C2Si compression benchmark. Adapted from MRLVAL v0.1 (Meta Reasoning Language Validation) phenomenon categories. Each case tests that critical semantic invariants survive compression while verbose patterns get compressed. Invariant entries are either strings (exact match required) or arrays of strings (any-of match, for semantic equivalence classes — e.g. 'revenue' OR 'rev' both preserve meaning).",
+  "hardThresholds": {
+    "minRatioOverall": 1.0,
+    "invariantViolationTolerance": 0,
+    "determinismRequired": true
+  },
+  "cases": [
+    {
+      "id": "NEG-001",
+      "category": "negation",
+      "difficulty": 1,
+      "raw": "The committee did not approve the proposal because of budgetary concerns.",
+      "mustContain": ["not", "committee", "approve", "proposal"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Simple negation must survive compression (never drop 'not')"
+    },
+    {
+      "id": "NEG-002",
+      "category": "negation",
+      "difficulty": 2,
+      "raw": "It is not the case that all of the employees received a bonus this year.",
+      "mustContain": ["not", "all", "employees", "bonus"],
+      "mustNotContain": [],
+      "minRatio": 1.1,
+      "note": "Wide-scope negation over universal quantifier (not-all, not all-not)"
+    },
+    {
+      "id": "NEG-003",
+      "category": "negation",
+      "difficulty": 3,
+      "raw": "The report does not claim that no improvements were made during the quarter.",
+      "mustContain": ["not", "no", "improvements", "report"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Double negation — both 'not' and 'no' must be preserved"
+    },
+
+    {
+      "id": "MOD-001",
+      "category": "modality",
+      "difficulty": 1,
+      "raw": "The Federal Reserve might raise interest rates at the next meeting.",
+      "mustContain": ["might", "Federal Reserve", "raise", "rates"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Epistemic 'might' (possibility) must not be dropped or confused with 'will'"
+    },
+    {
+      "id": "MOD-002",
+      "category": "modality",
+      "difficulty": 2,
+      "raw": "All publicly traded companies must comply with the new regulations by January 2026.",
+      "mustContain": ["must", "comply", "regulations", "January", "2026"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Deontic 'must' (obligation) — loss would change legal meaning entirely"
+    },
+    {
+      "id": "MOD-003",
+      "category": "modality",
+      "difficulty": 2,
+      "raw": "The team should probably consider alternative approaches before finalizing the design.",
+      "mustContain": ["should", "consider", "alternative", "design"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Weak recommendation 'should' must survive"
+    },
+
+    {
+      "id": "QUANT-001",
+      "category": "quantification",
+      "difficulty": 1,
+      "raw": "Every student in the class completed all of the required assignments.",
+      "mustContain": ["Every", "student", "all", "assignments"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Universal quantifiers 'every' and 'all' must both be preserved"
+    },
+    {
+      "id": "QUANT-002",
+      "category": "quantification",
+      "difficulty": 2,
+      "raw": "Some of the investors withdrew funds while none of the analysts recommended selling.",
+      "mustContain": ["Some", "investors", "none", "analysts"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Existential 'some' and negative 'none' must survive"
+    },
+    {
+      "id": "QUANT-003",
+      "category": "quantification",
+      "difficulty": 3,
+      "raw": "At least three members of the board objected to the proposal, but no more than five supported it.",
+      "mustContain": ["three", "board", "five", "proposal"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Numerical quantifiers with cardinality must be preserved"
+    },
+
+    {
+      "id": "NUM-001",
+      "category": "numbers_and_measurements",
+      "difficulty": 1,
+      "raw": "The European Central Bank raised interest rates by 50 basis points on Thursday.",
+      "mustContain": ["European Central Bank", "50", "Thursday", ["basis points", "bp"]],
+      "mustNotContain": [],
+      "minRatio": 1.1,
+      "domain": "finance",
+      "note": "Numbers and units preserved (allow 'bp' as equivalent to 'basis points')"
+    },
+    {
+      "id": "NUM-002",
+      "category": "numbers_and_measurements",
+      "difficulty": 2,
+      "raw": "Revenue grew by approximately 15.3 percent year over year to reach 2.4 billion dollars.",
+      "mustContain": [["Revenue", "Rev", "rev"], "15.3", "2.4", "billion"],
+      "mustNotContain": [],
+      "minRatio": 1.05,
+      "domain": "finance",
+      "note": "Decimal numbers and magnitudes preserved exactly. Information-dense text has limited compression slack."
+    },
+    {
+      "id": "NUM-003",
+      "category": "numbers_and_measurements",
+      "difficulty": 2,
+      "raw": "The athlete ran 3.5 kilometers in exactly 12 minutes and 45 seconds.",
+      "mustContain": ["3.5", "12", "45"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Multiple numeric values with different units"
+    },
+
+    {
+      "id": "DATE-001",
+      "category": "dates_and_time",
+      "difficulty": 1,
+      "raw": "The merger was announced on January 15, 2026, following months of negotiations.",
+      "mustContain": ["January", "15", "2026", "merger"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Dates must be preserved exactly"
+    },
+    {
+      "id": "DATE-002",
+      "category": "dates_and_time",
+      "difficulty": 2,
+      "raw": "The project has been delayed and will not be completed until the third quarter of next year.",
+      "mustContain": ["not", "third quarter", "next year"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Relative dates with negation and aspect"
+    },
+
+    {
+      "id": "ENT-001",
+      "category": "named_entities",
+      "difficulty": 1,
+      "raw": "Jerome Powell, the Chairman of the Federal Reserve, stated that inflation remains a primary concern.",
+      "mustContain": ["Jerome Powell", "Federal Reserve", "inflation"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Person and organization names must be preserved"
+    },
+    {
+      "id": "ENT-002",
+      "category": "named_entities",
+      "difficulty": 2,
+      "raw": "Apple Inc. and Microsoft Corporation both announced partnerships with OpenAI in 2025.",
+      "mustContain": ["Apple", "Microsoft", "OpenAI", "2025"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Multiple company names with year"
+    },
+    {
+      "id": "ENT-003",
+      "category": "named_entities",
+      "difficulty": 2,
+      "raw": "The Securities and Exchange Commission announced new rules. The Securities and Exchange Commission also emphasized enforcement. The Securities and Exchange Commission will begin audits next month. The Securities and Exchange Commission expects cooperation.",
+      "mustContain": ["Securities and Exchange Commission", "rules", "audits"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Long entity repeated 4+ times — first occurrence must be full, rest use $a refs"
+    },
+
+    {
+      "id": "COND-001",
+      "category": "conditionals",
+      "difficulty": 1,
+      "raw": "If inflation continues to rise, the central bank will likely increase interest rates.",
+      "mustContain": ["inflation", "central bank", "rates"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Conditional 'if' structure — must preserve condition and consequence"
+    },
+    {
+      "id": "COND-002",
+      "category": "conditionals",
+      "difficulty": 2,
+      "raw": "Unless the board approves the budget by Friday, the project cannot proceed as planned.",
+      "mustContain": ["Unless", "board", "budget", "Friday", "cannot", "proceed"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "'Unless' (negative condition) — must not be confused with 'if'"
+    },
+
+    {
+      "id": "COMP-001",
+      "category": "comparison",
+      "difficulty": 1,
+      "raw": "Revenue this quarter is greater than last quarter but less than the quarter before.",
+      "mustContain": [["greater", ">"], ["less", "<"], "quarter"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Greater-than / less-than comparisons preserved (symbols are semantically equivalent)"
+    },
+    {
+      "id": "COMP-002",
+      "category": "comparison",
+      "difficulty": 2,
+      "raw": "The new system processes data twice as fast as the previous version.",
+      "mustContain": ["twice", "fast", ["previous", "prev"]],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Multiplicative comparison 'twice as fast'"
+    },
+
+    {
+      "id": "CAUSE-001",
+      "category": "causal",
+      "difficulty": 1,
+      "raw": "Stock prices declined sharply due to the fact that the company reported disappointing earnings.",
+      "mustContain": ["declined", "company", "earnings"],
+      "mustNotContain": ["due to the fact that"],
+      "minRatio": 1.2,
+      "note": "'due to the fact that' must be compressed to 'because' or similar"
+    },
+    {
+      "id": "CAUSE-002",
+      "category": "causal",
+      "difficulty": 2,
+      "raw": "As a result of the new regulations, several firms were forced to restructure their operations.",
+      "mustContain": ["regulations", "firms", "restructure"],
+      "mustNotContain": [],
+      "minRatio": 1.1,
+      "note": "Causal chain with result marker"
+    },
+
+    {
+      "id": "ASPECT-001",
+      "category": "temporal_aspect",
+      "difficulty": 1,
+      "raw": "The team has already completed the first phase of the project.",
+      "mustContain": ["already", "completed", "phase"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Perfective aspect 'already' must survive"
+    },
+    {
+      "id": "ASPECT-002",
+      "category": "temporal_aspect",
+      "difficulty": 2,
+      "raw": "The customer has not yet received a response from customer service.",
+      "mustContain": ["not", "yet", "customer", "response"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Negated perfective 'not yet' — both tokens critical"
+    },
+
+    {
+      "id": "COREF-001",
+      "category": "coreference",
+      "difficulty": 2,
+      "raw": "Microsoft announced the acquisition. The company expects to close the deal by December.",
+      "mustContain": ["Microsoft", "acquisition", "December"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Cross-sentence coreference — entity must still be identifiable"
+    },
+
+    {
+      "id": "NESTED-001",
+      "category": "nested_clauses",
+      "difficulty": 3,
+      "raw": "The analyst said that the CEO believed that the company would exceed its quarterly targets.",
+      "mustContain": ["analyst", "CEO", "company", "targets"],
+      "mustNotContain": [],
+      "minRatio": 1.1,
+      "note": "Nested speech/belief reports — all actors must be preserved"
+    },
+
+    {
+      "id": "AMBIG-001",
+      "category": "structural_ambiguity",
+      "difficulty": 3,
+      "raw": "I saw the man with the telescope on the hill yesterday.",
+      "mustContain": ["man", "telescope", "hill", "yesterday"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "PP-attachment ambiguity — all entities must remain (ambiguity preserved)"
+    },
+
+    {
+      "id": "DIALOG-001",
+      "category": "dialogue",
+      "difficulty": 2,
+      "raw": "Alice asked: 'Did you finish the report?' Bob replied: 'Yes, I sent it this morning.'",
+      "mustContain": ["Alice", "Bob", "report", "morning"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Dialogue structure with speakers and turns"
+    },
+
+    {
+      "id": "VERB-001",
+      "category": "verbose_compression",
+      "difficulty": 1,
+      "raw": "In order to effectively address the ongoing challenges, the team must develop a comprehensive strategy.",
+      "mustContain": ["challenges", "team", "strategy"],
+      "mustNotContain": ["in order to"],
+      "minRatio": 1.15,
+      "note": "'in order to' must be compressed to 'to'"
+    },
+    {
+      "id": "VERB-002",
+      "category": "verbose_compression",
+      "difficulty": 1,
+      "raw": "It is important to note that the budget will need to be adjusted accordingly.",
+      "mustContain": ["budget", "adjusted"],
+      "mustNotContain": ["it is important to note that"],
+      "minRatio": 1.2,
+      "note": "Filler phrases must be removed"
+    },
+    {
+      "id": "VERB-003",
+      "category": "verbose_compression",
+      "difficulty": 2,
+      "raw": "Due to the fact that we have limited resources, we will need to prioritize our efforts accordingly.",
+      "mustContain": ["limited", "resources", "prioritize"],
+      "mustNotContain": ["due to the fact that"],
+      "minRatio": 1.2,
+      "note": "Multiple compression patterns"
+    },
+
+    {
+      "id": "FILLER-001",
+      "category": "filler_removal",
+      "difficulty": 1,
+      "raw": "The system is basically quite simple and actually rather easy to use.",
+      "mustContain": ["system", "simple", "use"],
+      "mustNotContain": ["basically", "actually"],
+      "minRatio": 1.1,
+      "note": "Filler adverbs must be removed"
+    },
+
+    {
+      "id": "CONN-001",
+      "category": "connector_compression",
+      "difficulty": 1,
+      "raw": "The first proposal was rejected. However, the committee approved the second one. Furthermore, they requested additional revisions.",
+      "mustContain": ["rejected", "approved", "revisions"],
+      "mustNotContain": ["However,"],
+      "minRatio": 1.0,
+      "note": "'However' and 'Furthermore' should compress to symbols"
+    },
+
+    {
+      "id": "PASSIVE-001",
+      "category": "passive_voice",
+      "difficulty": 2,
+      "raw": "The proposal was approved by the committee after extensive discussion.",
+      "mustContain": ["proposal", "approved", "committee"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Passive voice — semantic roles must not swap"
+    },
+
+    {
+      "id": "TECH-001",
+      "category": "technical_domain",
+      "difficulty": 2,
+      "raw": "The authentication middleware validates JSON Web Tokens and enforces rate limiting across all API endpoints.",
+      "mustContain": ["JSON Web Tokens", "API", ["authentication", "auth"], ["middleware", "mw"]],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "domain": "code",
+      "note": "Technical terms and acronyms must be preserved (abbreviations allowed)"
+    },
+    {
+      "id": "TECH-002",
+      "category": "technical_domain",
+      "difficulty": 2,
+      "raw": "The asynchronous function handles database queries and returns a promise that resolves when all operations complete.",
+      "mustContain": [["asynchronous", "async"], "queries", "promise", "operations"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "domain": "code",
+      "note": "Code terminology should abbreviate in code domain"
+    },
+
+    {
+      "id": "FIN-001",
+      "category": "finance_domain",
+      "difficulty": 2,
+      "raw": "Year over year revenue growth exceeded 10 basis points, driven by strong quarterly performance across all regions.",
+      "mustContain": [["Year over year", "YoY"], ["revenue", "rev"], "10", ["basis points", "bp"]],
+      "mustNotContain": [],
+      "minRatio": 1.1,
+      "domain": "finance",
+      "note": "Finance-specific abbreviations (YoY, bp, rev)"
+    },
+
+    {
+      "id": "DETERM-001",
+      "category": "determinism",
+      "difficulty": 1,
+      "raw": "The quick brown fox jumps over the lazy dog in the meadow at sunrise.",
+      "mustContain": ["fox", "dog", "meadow", "sunrise"],
+      "mustNotContain": [],
+      "minRatio": 1.0,
+      "note": "Must produce identical output on repeated calls"
+    },
+
+    {
+      "id": "REGR-001",
+      "category": "no_regression",
+      "difficulty": 1,
+      "raw": "Hello world.",
+      "mustContain": ["Hello", "world"],
+      "mustNotContain": [],
+      "minRatio": 0.9,
+      "note": "Very short text should not expand (tolerance 0.9x for edge case)"
+    },
+    {
+      "id": "REGR-002",
+      "category": "no_regression",
+      "difficulty": 1,
+      "raw": "OK.",
+      "mustContain": ["OK"],
+      "mustNotContain": [],
+      "minRatio": 0.8,
+      "note": "Minimal text — may not compress but must not double in size"
+    },
+
+    {
+      "id": "COMB-001",
+      "category": "combined_stress",
+      "difficulty": 4,
+      "raw": "Although it is important to note that the European Central Bank has not yet made a final decision, analysts believe that the central bank will likely raise interest rates by approximately 25 basis points at the next meeting, due to the fact that persistent inflation concerns have been growing significantly across the eurozone economy.",
+      "mustContain": ["not", "European Central Bank", "raise", "25", "inflation"],
+      "mustNotContain": ["due to the fact that", "it is important to note that"],
+      "minRatio": 1.25,
+      "domain": "finance",
+      "note": "Stress test: negation + modality + numbers + entities + verbose patterns all in one"
+    },
+    {
+      "id": "COMB-002",
+      "category": "combined_stress",
+      "difficulty": 5,
+      "raw": "In the event that the Securities and Exchange Commission determines that the company did not properly disclose the material information, the Securities and Exchange Commission may impose significant penalties. Furthermore, the Securities and Exchange Commission has stated that all publicly traded companies must comply with the new regulations, which will become effective on January 1, 2026. It should be noted that the Securities and Exchange Commission has been increasing its enforcement activities throughout the year.",
+      "mustContain": ["Securities and Exchange Commission", "not", "must", "January", "2026"],
+      "mustNotContain": ["in the event that", "it should be noted that"],
+      "minRatio": 1.2,
+      "domain": "finance",
+      "note": "Ultimate stress test: entity dedup + negation + modality + date + verbose patterns"
+    }
+  ]
+}
