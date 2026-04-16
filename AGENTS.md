@@ -7,8 +7,8 @@
 
 C2Si compresses human language into token-efficient notation for LLM consumption. It removes redundant function words, filler phrases, and articles — while **guaranteeing** that all critical semantic content (negations, modalities, entities, numbers, dates) survives.
 
-**Typical savings**: 20–40% tokens on prose, up to 60% on verbose corporate text.
-**Correctness**: 165 assertion test suite across 18 phenomenon categories (MRLVAL-adapted).
+**Typical savings**: 20–40% tokens on prose, up to 60% on verbose corporate text (Tier 1); 5–9x vs raw when Tier 3 preamble is cached across calls.
+**Correctness**: 198-assertion benchmark suite (165 Tier 1/2 + 33 Tier 3) across 18 phenomenon categories, MRLVAL-adapted.
 **Compatibility**: pure text in → pure text out. Works with GPT, Claude, Gemini, Llama, any LLM.
 
 ## When you should use it
@@ -186,7 +186,7 @@ await openai.chat.completions.create({
 
 ## Safety guarantees
 
-All guarantees are enforced by the benchmark suite (`tests/benchmark/fixtures.json`, 165 assertions). The build breaks on any regression.
+All guarantees are enforced by the benchmark suite: 165 assertions for Tier 1/2 (`tests/benchmark/fixtures.json`) plus 33 assertions for Tier 3 (`tests/benchmark/tier3-fixtures.json`) — **198 total**. The build breaks on any regression.
 
 **Invariants preserved** (you can rely on these):
 
@@ -302,14 +302,16 @@ If a critical invariant was dropped, please open an issue with the input text �
 | `src/adapters/ollama.ts` | Ollama HTTP adapter |
 | `src/adapters/openai.ts` | OpenAI-compatible HTTP adapter |
 | `src/tokenizer/counter.ts` | GPT BPE token counting |
-| `tests/benchmark.test.ts` | Hard CI gate (165 assertions) |
-| `tests/benchmark/fixtures.json` | Benchmark test cases |
+| `tests/benchmark.test.ts` | Tier 1/2 CI gate (165 assertions) |
+| `tests/tier3-benchmark.test.ts` | Tier 3 CI gate (33 assertions) |
+| `tests/benchmark/fixtures.json` | Tier 1/2 fixtures (43 cases, 18 categories) |
+| `tests/benchmark/tier3-fixtures.json` | Tier 3 fixtures (8 cases) |
 
 ## Running the tests
 
 ```bash
-npm test            # 224 tests (unit + benchmark)
-npm run benchmark   # benchmark only (165 assertions)
+npm test            # 282 tests (unit + benchmark across all tiers)
+npm run benchmark   # 198-assertion CI gate (Tier 1/2 + Tier 3)
 npm run build       # produces dist/index.{js,cjs,d.ts}
 ```
 

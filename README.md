@@ -37,7 +37,7 @@ Human language is **wildly redundant** for machine consumption. LLMs don't need 
 
 But removing redundancy naively breaks meaning. Drop "not" and a statement inverts. Drop a number and facts vanish. Drop a modal verb and obligation becomes suggestion.
 
-C2Si is a **token-aware, invariant-preserving compressor** that squeezes human language into a denser form while guaranteeing every critical semantic token survives — verified against 165 test cases covering 18 linguistic phenomenon categories adapted from MRLVAL v0.1.
+C2Si is a **token-aware, invariant-preserving compressor** that squeezes human language into a denser form while guaranteeing every critical semantic token survives — verified against **198 benchmark assertions** across 18 linguistic phenomenon categories (adapted from MRLVAL v0.1) plus dedicated Tier 3 safety gates.
 
 ### The savings, on real text
 
@@ -517,39 +517,47 @@ The benchmark runs in `npm test` and breaks the build on any regression.
 ```
 c2si/
 ├── src/
-│   ├── index.ts            # Public API
-│   ├── convenience.ts      # compress(), compressMessages(), etc.
-│   ├── compressor.ts       # C2Si class
-│   ├── rules/              # Rule engine
-│   │   ├── stopwords.ts    # Articles, fillers, verbose phrases
-│   │   ├── entities.ts     # NER + token-aware dedup
-│   │   ├── structural.ts   # Prose reflow patterns
-│   │   └── abbreviations.ts# Domain-specific shortenings
-│   ├── scn/                # SCN format + LLM prompt
-│   ├── adapters/           # Ollama, OpenAI-compatible
-│   └── tokenizer/          # GPT BPE counting
+│   ├── index.ts                # Public API
+│   ├── convenience.ts          # compress(), compressMessages(), compressHyper()
+│   ├── compressor.ts           # C2Si class + session manager
+│   ├── rules/                  # Tier 1 rule engine
+│   │   ├── stopwords.ts        # Articles, fillers, verbose phrases
+│   │   ├── entities.ts         # NER + token-aware dedup
+│   │   ├── structural.ts       # Prose reflow patterns
+│   │   └── abbreviations.ts    # Domain-specific shortenings
+│   ├── scn/                    # Tier 2 SCN format + LLM prompt
+│   ├── tier3/                  # Tier 3 HyperSCN (optional, not human-readable)
+│   │   ├── vocabulary.ts       # Verified 1-token symbol pool
+│   │   ├── hyper-scn.ts        # Deterministic SCN → HyperSCN encoder
+│   │   └── preamble.ts         # Self-describing LLM decoder preamble
+│   ├── adapters/               # Ollama, OpenAI-compatible
+│   └── tokenizer/              # GPT BPE counting
 └── tests/
-    ├── benchmark/          # MRLVAL-adapted test fixtures
-    ├── benchmark.test.ts   # Hard CI gate (165 assertions)
-    └── *.test.ts           # Unit tests
+    ├── benchmark/
+    │   ├── fixtures.json       # Tier 1/2 fixtures (43 cases, 18 categories)
+    │   ├── tier3-fixtures.json # Tier 3 fixtures (8 cases)
+    │   └── README.md           # Benchmark methodology
+    ├── benchmark.test.ts       # Tier 1/2 CI gate (165 assertions)
+    ├── tier3-benchmark.test.ts # Tier 3 CI gate (33 assertions)
+    └── *.test.ts               # Unit tests (convenience, rules, scn, tier3...)
 ```
 
 ---
 
 ## Research Foundation
 
-C2Si synthesizes three research threads:
+C2Si synthesizes four research threads into a three-tier compression pipeline:
 
-- **[SCN](./docs/scn.md) — Semantic Compression Notation** — tokenizer-aware hard prompt compression; training-distribution-aligned notation
-- **[MRL](./docs/mrl.md) — Meta Reasoning Language** — layered meta-language architecture (Anchor + Core Graph + Logic)
-- **[MRLVAL](./tests/benchmark/README.md)** — validation methodology with 18-category phenomenon coverage
+- **SCN — Semantic Compression Notation** — tokenizer-aware hard-prompt compression; training-distribution-aligned notation (basis for Tier 2)
+- **MRL — Meta Reasoning Language** — layered meta-language architecture (Anchor + Core Graph + Logic)
+- **MRLVAL** — validation methodology with 18-category phenomenon coverage (basis for [our benchmark](./tests/benchmark/README.md))
+- **VQ-VAE / discrete codebook compression** — inspired Tier 3's symbol-substitution approach (adapted for hard prompts via a self-describing preamble rather than learned codebooks)
 
 Key papers that shaped the design:
 - Banarescu et al., "Abstract Meaning Representation for Sembanking" (ACL 2013)
 - Cai & Knight, "Smatch: an Evaluation Metric for Semantic Feature Structures" (ACL 2013)
 - Jiang et al., "LLMLingua: Compressing Prompts for Accelerated Inference" (EMNLP 2023)
-
-See the [research synthesis document](./plans) for the full derivation.
+- van den Oord et al., "Neural Discrete Representation Learning" (VQ-VAE, NeurIPS 2017)
 
 ---
 
@@ -565,8 +573,8 @@ Three ways to contribute:
 git clone https://github.com/JiahaoRBC/c2si
 cd c2si
 npm install
-npm test            # Run all 224 tests
-npm run benchmark   # Run the 165-assertion benchmark gate
+npm test            # Run all 282 tests
+npm run benchmark   # Run the 198-assertion benchmark gate (Tier 1/2 + Tier 3)
 npm run build       # Build ESM + CJS + types
 ```
 
