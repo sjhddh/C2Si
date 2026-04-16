@@ -63,7 +63,7 @@ Tier 3 adds:
 
 ```bash
 npm run benchmark   # all 198 assertions (Tier 1/2 + Tier 3)
-npm test            # full suite (282 tests)
+npm test            # full suite (304 tests)
 ```
 
 ## Tier 1/2 Categories Covered (MRLVAL-aligned)

@@ -26,6 +26,8 @@ Do NOT use C2Si for:
 
 ## The 30-second integration
 
+### Via Node / TypeScript
+
 ```ts
 import { compress } from 'c2si';
 
@@ -34,6 +36,15 @@ const response = await yourLLMClient.complete(compress(longPrompt));
 ```
 
 That's it. `compress()` is synchronous, never throws, and returns a plain string.
+
+### Via shell / subprocess (for agents not running in Node)
+
+```bash
+c2si --json "$USER_TEXT"
+# → {"compressed":"...","originalTokens":N,"compressedTokens":M,"ratio":1.6,"percentSaved":38}
+```
+
+The CLI is TTY-aware: when called from a subprocess (non-TTY), it emits clean output with zero ANSI escapes. `--json` gives you a stable machine-parsable contract. Exit codes: `0` ok, `1` input error, `2` config error, `3` adapter error.
 
 ## Public API surface (import from `'c2si'`)
 
@@ -64,6 +75,40 @@ That's it. `compress()` is synchronous, never throws, and returns a plain string
 | `openaiAdapter` | `({ model, baseUrl, apiKey?, timeout?, temperature? }) → ModelAdapter` |
 
 A `ModelAdapter` is any `(prompt: string) => Promise<string>` function — you can also pass a custom function if you have a non-standard backend.
+
+## CLI (for agents not in a Node process)
+
+Install:
+
+```bash
+npm i -g c2si     # or: npx c2si ...
+```
+
+Invoke as a subprocess and parse `--json` output:
+
+```bash
+# Tier 1 (sync, fast)
+c2si --json "text to compress"
+# → {"compressed":"...","originalTokens":N,"compressedTokens":M,"ratio":R,"percentSaved":P}
+
+# Tier 3 (async, needs local/remote model)
+C2SI_PROVIDER=ollama C2SI_MODEL=llama3.2:3b c2si hyper --json < doc.txt
+# → {"text":"...","bodyOnly":"...","preamble":"...","ratio":R,...,"tier3Aliases":N,"tier2Tokens":T}
+
+# Token counting
+c2si count "Hello world"  # → 2
+```
+
+**Subprocess contract:**
+- Stdout: compressed text (or JSON with `--json`). Always clean, no ANSI, newline-terminated.
+- Stderr: spinners/stats (only when TTY); never when piped.
+- Exit: `0` success, `1` no input, `2` missing `--provider`/`--model` for hyper, `3` adapter error.
+
+**Env configuration** (preferred over flags for agents):
+- `C2SI_PROVIDER`, `C2SI_MODEL` — defaults for hyper
+- `OPENAI_API_KEY`, `OPENAI_BASE_URL` — for OpenAI-compatible providers
+- `OLLAMA_HOST` — for Ollama (default `http://localhost:11434`)
+- `NO_COLOR` — disable ANSI (auto-disabled when not a TTY anyway)
 
 ## Options object
 
@@ -299,6 +344,11 @@ If a critical invariant was dropped, please open an issue with the input text �
 | `src/tier3/vocabulary.ts` | Verified 1-token symbol pool (Greek letters, arrows) |
 | `src/tier3/hyper-scn.ts` | Tier 3 deterministic compressor (SCN → HyperSCN) |
 | `src/tier3/preamble.ts` | Self-describing LLM decoder preamble |
+| `src/cli/index.ts` | CLI entry point (subcommands, args, stdin, JSON mode) |
+| `src/cli/args.ts` | Zero-dep argv parser |
+| `src/cli/spinner.ts` | Braille spinner (TTY-only) |
+| `src/cli/colors.ts` | ANSI color wrapper (respects NO_COLOR) |
+| `src/cli/help.ts` | Help screen |
 | `src/adapters/ollama.ts` | Ollama HTTP adapter |
 | `src/adapters/openai.ts` | OpenAI-compatible HTTP adapter |
 | `src/tokenizer/counter.ts` | GPT BPE token counting |
@@ -310,7 +360,7 @@ If a critical invariant was dropped, please open an issue with the input text �
 ## Running the tests
 
 ```bash
-npm test            # 282 tests (unit + benchmark across all tiers)
+npm test            # 304 tests (unit + benchmark + CLI)
 npm run benchmark   # 198-assertion CI gate (Tier 1/2 + Tier 3)
 npm run build       # produces dist/index.{js,cjs,d.ts}
 ```
@@ -353,4 +403,13 @@ const r = await compressHyper(text, adapter);
 // r.text has preamble+content ready to send; r.preamble/r.bodyOnly for caching
 ```
 
-That's the entire library. No hidden APIs. No magic configuration. Drop `compress()` before your LLM call and ship it.
+```bash
+# CLI (for agents not in a Node process)
+c2si "text"                              # → compressed text on stdout
+c2si --json "text"                       # → machine-parsable JSON
+cat file.txt | c2si                      # → stdin pipe
+c2si count "text"                        # → token count
+c2si hyper --provider=ollama --model=llama3.2:3b < doc.txt  # → Tier 3
+```
+
+That's the entire library. No hidden APIs. No magic configuration. Drop `compress()` (or `c2si` in your shell) before your LLM call and ship it.

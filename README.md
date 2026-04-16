@@ -7,7 +7,7 @@
 *Compress human language into token-efficient notation for LLMs.*
 *Keep every bit of meaning. Pay 20–60% less per API call.*
 
-[![tests](https://img.shields.io/badge/tests-282%20passing-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-304%20passing-brightgreen)]()
 [![benchmark](https://img.shields.io/badge/benchmark-198%2F198-brightgreen)]()
 [![tiers](https://img.shields.io/badge/tiers-1%20%7C%202%20%7C%203-blue)]()
 [![zero deps](https://img.shields.io/badge/runtime%20deps-1-blue)]()
@@ -20,6 +20,19 @@
 
 ## TL;DR
 
+### From a shell (or agent subprocess)
+
+```bash
+npm i -g c2si
+c2si "In order to effectively address the ongoing challenges"
+# → to effectively address ongoing challenges
+
+# Agent-friendly JSON mode:
+c2si --json "text" | jq .compressed
+```
+
+### From Node / TypeScript
+
 ```ts
 import { compress } from 'c2si';
 
@@ -27,7 +40,7 @@ const prompt = compress(longSystemPrompt);  // 40% fewer tokens, same meaning
 await openai.chat.completions.create({ messages: [{ role: 'user', content: prompt }] });
 ```
 
-**One import. One function. Drop-in for any LLM API.**
+**One import, one function, one CLI. Drop-in for any LLM API.**
 
 ---
 
@@ -101,6 +114,53 @@ const response = await openai.chat.completions.create({
 ```
 
 `compressMessages()` takes an array of OpenAI-compatible messages and returns the same array with compressed `content` fields. Every other field (role, name, tool_call_id, ...) passes through untouched.
+
+---
+
+## CLI
+
+Install globally or use via `npx`:
+
+```bash
+npm i -g c2si        # global
+npx c2si "text"      # ad-hoc
+```
+
+### Commands
+
+```bash
+c2si "text"                                          # compress (Tier 1)
+cat document.txt | c2si                              # stdin pipe
+c2si count "text"                                    # token count
+c2si hyper --provider=ollama --model=llama3.2:3b < long.md    # Tier 3
+c2si --help                                          # full help screen
+```
+
+### Agent-friendly flags
+
+| Flag | Purpose |
+|---|---|
+| `--json` | Machine-readable JSON output (for subprocess callers) |
+| `--stats` | Compression stats on stderr; compressed text on stdout |
+| `--quiet` | Suppress spinners and banners |
+| `--domain=<d>` | Domain hint: `finance`, `legal`, `code`, `medical` |
+
+### Env vars
+
+| Var | Purpose |
+|---|---|
+| `C2SI_PROVIDER` | Default provider (`ollama` or `openai`) |
+| `C2SI_MODEL` | Default model name |
+| `OLLAMA_HOST` | Ollama server URL (default `http://localhost:11434`) |
+| `OPENAI_API_KEY` | API key for OpenAI-compatible providers |
+| `OPENAI_BASE_URL` | Override base URL for `openai` provider |
+| `NO_COLOR` | Disable ANSI colors |
+
+### Exit codes
+
+`0` success · `1` invalid/empty input · `2` config error (missing provider/model) · `3` adapter/network error
+
+The CLI auto-detects TTY: a human gets a braille spinner during model calls, an agent subprocess gets clean text output with zero ANSI escapes.
 
 ---
 
@@ -573,7 +633,7 @@ Three ways to contribute:
 git clone https://github.com/JiahaoRBC/c2si
 cd c2si
 npm install
-npm test            # Run all 282 tests
+npm test            # Run all 304 tests
 npm run benchmark   # Run the 198-assertion benchmark gate (Tier 1/2 + Tier 3)
 npm run build       # Build ESM + CJS + types
 ```

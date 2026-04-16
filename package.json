@@ -18,6 +18,9 @@
       }
     }
   },
+  "bin": {
+    "c2si": "./dist/cli.cjs"
+  },
   "files": [
     "dist"
   ],
