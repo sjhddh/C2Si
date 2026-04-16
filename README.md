@@ -7,8 +7,9 @@
 *Compress human language into token-efficient notation for LLMs.*
 *Keep every bit of meaning. Pay 20–60% less per API call.*
 
-[![tests](https://img.shields.io/badge/tests-224%20passing-brightgreen)]()
-[![benchmark](https://img.shields.io/badge/MRLVAL%20benchmark-165%2F165-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-282%20passing-brightgreen)]()
+[![benchmark](https://img.shields.io/badge/benchmark-198%2F198-brightgreen)]()
+[![tiers](https://img.shields.io/badge/tiers-1%20%7C%202%20%7C%203-blue)]()
 [![zero deps](https://img.shields.io/badge/runtime%20deps-1-blue)]()
 [![typescript](https://img.shields.io/badge/TypeScript-strict-blue)]()
 [![license](https://img.shields.io/badge/license-Apache%202.0-green)]()
@@ -134,34 +135,43 @@ Any LLM reading the compressed version answers questions about the original with
 
 ## How It Works
 
-C2Si is a **two-tier compression pipeline**:
+C2Si is a **three-tier compression pipeline**:
 
 ```
-┌───────────────────────────────────────────────┐
-│                                               │
-│   Your text (1000 tokens)                     │
-│            │                                  │
-│            ▼                                  │
-│   ┌───────────────────────┐                   │
-│   │  Tier 1: Rules Engine │  ← always runs    │
-│   │  • Stop words         │                   │
-│   │  • Entity dedup (@E)  │  ~1.2–1.6x        │
-│   │  • Structural reflow  │                   │
-│   │  • Abbreviations      │                   │
-│   └───────────┬───────────┘                   │
-│               │                               │
-│               ▼                               │
-│   ┌───────────────────────┐                   │
-│   │  Tier 2: SCN Model    │  ← optional       │
-│   │  • LLM-assisted       │                   │
-│   │  • Full predicate-arg │  ~3–5x            │
-│   │  • Discourse relations│                   │
-│   └───────────┬───────────┘                   │
-│               │                               │
-│               ▼                               │
-│   Compressed SCN (200-350 tokens)             │
-│                                               │
-└───────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                                                     │
+│   Your text (1000 tokens)                           │
+│            │                                        │
+│            ▼                                        │
+│   ┌───────────────────────┐                         │
+│   │  Tier 1: Rules Engine │  ← always runs          │
+│   │  • Stop words         │                         │
+│   │  • Entity dedup (@E)  │  ~1.2–1.6x              │
+│   │  • Structural reflow  │                         │
+│   │  • Abbreviations      │                         │
+│   └───────────┬───────────┘                         │
+│               │                                     │
+│               ▼                                     │
+│   ┌───────────────────────┐                         │
+│   │  Tier 2: SCN Model    │  ← optional             │
+│   │  • LLM-assisted       │                         │
+│   │  • Full predicate-arg │  ~3–5x                  │
+│   │  • Discourse relations│                         │
+│   └───────────┬───────────┘                         │
+│               │                                     │
+│               ▼                                     │
+│   ┌───────────────────────┐                         │
+│   │  Tier 3: HyperSCN     │  ← optional, aggressive │
+│   │  • Greek letter alias │                         │
+│   │  • Positional args    │  +1.3–1.7x extra        │
+│   │  • Self-describing    │                         │
+│   │    preamble           │  (up to 5–9x vs raw)    │
+│   └───────────┬───────────┘                         │
+│               │                                     │
+│               ▼                                     │
+│   Compressed (100–300 tokens)                       │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
 
 ### Tier 1 — Rules Engine (synchronous, zero config)
@@ -187,6 +197,34 @@ RAISE a0:ECB a1:interest-rates a2:+50bp tm:Thursday mn:unexpected cs:inflation
 ```
 
 The economics: spend pennies on a local 3B model to save dollars on GPT-4 / Claude Opus.
+
+### Tier 3 — HyperSCN (optional, deliberately not human-readable)
+
+For maximum compression on long documents or high-volume agents, Tier 3 post-processes Tier 2 SCN via two deterministic transforms:
+
+1. **Greek letter aliasing** — frequent predicates get 1-token symbols: `RAISE → α`, `DECLINE → β`, `ANNOUNCE → γ`. Only applied when tokenizer math proves it saves tokens.
+2. **Positional argument notation** — drop `a0:`/`a1:`/`a2:` role prefixes where the predicate semantics make order unambiguous.
+
+Output:
+```
+§pred α=RAISE β=DECLINE γ=ANNOUNCE
+α $a rates +50bp tm:Thursday mn:unexpected cs:inflation
+→CAUSE: EXCEED inflation target tm:6mo
+→RESULT: β EUR-USD -2.1%
+```
+
+A ~270-token **self-describing preamble** teaches any LLM how to decode this in-context — no fine-tuning or special API support needed. The preamble is one-time overhead: cache it in a system prompt and amortize across many requests.
+
+**Economics**: on a 500-token SCN input with repeating predicates, Tier 3 delivers 1.7x additional compression. Combined with Tier 2 (3x vs raw), total end-to-end ratio reaches **5x when the preamble is cached**. Not human-readable — strictly a machine-to-machine dialect.
+
+**When to use each tier:**
+
+| Scenario | Recommended tier |
+|---|---|
+| Short prompt, single call | Tier 1 (synchronous, no setup) |
+| Long doc, single call | Tier 2 (model-assisted SCN) |
+| Agent with cached system prompt, many calls | Tier 3 (HyperSCN + cached preamble) |
+| RAG with 10+ chunks per request | Tier 3 (preamble amortizes) |
 
 ---
 
@@ -246,6 +284,35 @@ import { compressWithModel, ollamaAdapter } from 'c2si';
 const adapter = ollamaAdapter({ model: 'llama3.2:3b' });
 const compressed = await compressWithModel(longDoc, adapter);
 ```
+
+### `compressHyper(text, adapter, options?) → Promise<HyperCompressResult>`
+
+Tier 3 — ultra-dense HyperSCN (raw text → Tier 2 → Tier 3 in one call). Returns text + diagnostic report. Preamble is included by default; pass `{ includePreamble: false }` to cache it separately.
+
+```ts
+import { compressHyper, ollamaAdapter } from 'c2si';
+
+const adapter = ollamaAdapter({ model: 'llama3.2:3b' });
+const r = await compressHyper(longDoc, adapter);
+
+// Send r.text directly (has preamble embedded):
+await openai.chat.completions.create({
+  messages: [{ role: 'user', content: r.text }],
+});
+
+// Or cache the preamble in the system prompt for repeated use:
+const r = await compressHyper(doc, adapter, { includePreamble: false });
+await openai.chat.completions.create({
+  messages: [
+    { role: 'system', content: r.preamble }, // cached across calls
+    { role: 'user',   content: r.bodyOnly },
+  ],
+});
+```
+
+### `compressSCNToHyper(scn) → HyperSCNResult`
+
+Apply Tier 3 to already-SCN-formatted text. Synchronous, no model required. Returns the input unchanged if the legend overhead would exceed savings (cost-benefit guarded).
 
 ### `tokens(text) → number`
 
@@ -388,7 +455,11 @@ const compressed = await compressWithModel(
 
 ## The Benchmark
 
-C2Si ships with a **hard CI gate**: 165 assertions across 43 test cases, covering 18 phenomenon categories adapted from [MRLVAL v0.1](./tests/benchmark/README.md) — the research methodology for validating lossless semantic compression.
+C2Si ships with a **hard CI gate**: **198 assertions** total:
+- **165 assertions** across 43 test cases for Tier 1/2 (18 phenomenon categories, adapted from [MRLVAL v0.1](./tests/benchmark/README.md))
+- **33 assertions** across 8 test cases for Tier 3 (entity, negation, modality, number, time, discourse, combined stress)
+
+Every invariant is enforced on every build.
 
 ```bash
 npm run benchmark

@@ -7,9 +7,29 @@ export {
   compressWithModel,
   compressMessages,
   compressReport,
+  compressHyper,
+  compressSCNToHyper,
   tokens,
 } from './convenience.js';
-export type { ChatMessage, CompressionReport } from './convenience.js';
+export type {
+  ChatMessage,
+  CompressionReport,
+  HyperOptions,
+  HyperCompressResult,
+} from './convenience.js';
+
+// ─────────────────────────────────────────────────────────────
+// Tier 3 — HyperSCN (optional ultra-dense compression)
+// ─────────────────────────────────────────────────────────────
+export {
+  compressToHyperSCN,
+  withPreamble,
+  HYPER_SCN_PREAMBLE,
+  PREAMBLE_TOKEN_COST,
+  PREDICATE_ALIASES,
+  DISCOURSE_ARROWS,
+} from './tier3/index.js';
+export type { HyperSCNResult } from './tier3/index.js';
 
 // ─────────────────────────────────────────────────────────────
 // Full class API (stateful use, sessions, custom config)

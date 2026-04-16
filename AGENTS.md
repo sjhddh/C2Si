@@ -41,11 +41,13 @@ That's it. `compress()` is synchronous, never throws, and returns a plain string
 
 | Function | Signature | Purpose |
 |---|---|---|
-| `compress` | `(text, options?) → string` | One-line compression. Returns compressed string directly. |
+| `compress` | `(text, options?) → string` | **Tier 1.** One-line compression. Returns compressed string directly. |
 | `compressDetailed` | `(text, options?) → CompressResult` | Same but with token statistics. |
 | `compressMessages` | `(messages[], options?) → messages[]` | Drop-in for OpenAI-compatible `messages` arrays. |
 | `compressReport` | `(text, options?) → {text, report}` | Returns text + `{tokensSaved, ratio, percentSaved}`. |
-| `compressWithModel` | `(text, adapter, options?) → Promise<string>` | Async, model-assisted deep compression. |
+| `compressWithModel` | `(text, adapter, options?) → Promise<string>` | **Tier 2.** Async, model-assisted (~3-5x). |
+| `compressHyper` | `(text, adapter, options?) → Promise<HyperCompressResult>` | **Tier 3.** Ultra-dense HyperSCN (not human-readable). |
+| `compressSCNToHyper` | `(scn: string) → HyperSCNResult` | Apply Tier 3 to already-SCN text; no model call. |
 | `tokens` | `(text) → number` | GPT-4 BPE token count. |
 
 ### Stateful API
@@ -161,6 +163,27 @@ const compressed = await compressWithModel(longDocument, adapter);
 // → ~3-5x compression into SCN notation
 ```
 
+### Pattern 6: Tier 3 HyperSCN for high-volume agents
+
+```ts
+import { compressHyper, ollamaAdapter } from 'c2si';
+
+const adapter = ollamaAdapter({ model: 'llama3.2:3b' });
+
+// One-shot (preamble embedded) — simplest
+const r = await compressHyper(longDocument, adapter);
+await openai.chat.completions.create({ messages: [{ role: 'user', content: r.text }] });
+
+// Amortized (preamble cached) — best for repeated calls
+const { preamble, bodyOnly } = await compressHyper(doc, adapter, { includePreamble: false });
+await openai.chat.completions.create({
+  messages: [
+    { role: 'system', content: preamble },  // ~270t paid once across all calls
+    { role: 'user',   content: bodyOnly },
+  ],
+});
+```
+
 ## Safety guarantees
 
 All guarantees are enforced by the benchmark suite (`tests/benchmark/fixtures.json`, 165 assertions). The build breaks on any regression.
@@ -205,12 +228,33 @@ All guarantees are enforced by the benchmark suite (`tests/benchmark/fixtures.js
 
 ## Compression tiers — which to use?
 
-| Tier | Function | Async? | Config needed | Ratio | Use when |
-|---|---|---|---|---|---|
-| **Rules** | `compress()` | No | None | 1.1–1.6x | Default. Zero setup. |
-| **Rules + SCN** | `compressWithModel()` | Yes | Model adapter | 3–5x | Very long docs, local GPU/CPU available |
+| Tier | Function | Async? | Config needed | Ratio | Human-readable? | Use when |
+|---|---|---|---|---|---|---|
+| **1 (Rules)** | `compress()` | No | None | 1.1–1.6x | Yes | Default. Zero setup. |
+| **2 (SCN)** | `compressWithModel()` | Yes | Model adapter | 3–5x | Partially | Very long docs, local model available |
+| **3 (HyperSCN)** | `compressHyper()` | Yes | Model adapter | 5–9x | No | High-volume agents with cached preamble, or RAG with many chunks |
 
-For most agents, **Tier 1 is all you need**. Tier 2 is for workflows where you send MB-scale documents to an expensive model and want to run them through a cheap local 3B model first.
+**Decision tree:**
+- No adapter available → Tier 1
+- Adapter available, one-shot request, prompt < 500 tokens → Tier 1 (Tier 2/3 overhead not worth it)
+- Adapter available, one-shot request, prompt > 2000 tokens → Tier 2
+- Adapter available, repeated calls with shared system prompt → Tier 3 (preamble caches for free)
+- RAG pipeline injecting 10+ chunks per request → Tier 3 (preamble amortizes across chunks)
+
+### Tier 3 preamble caching pattern (critical for cost savings)
+
+Tier 3 emits a ~270-token preamble that teaches the target LLM how to decode HyperSCN. For a single request this is overhead, but if you cache it in the system prompt, the cost is paid once across all requests.
+
+```ts
+// Efficient: pay preamble cost ONCE, then many compressed calls
+const { preamble, bodyOnly } = await compressHyper(doc1, adapter, { includePreamble: false });
+
+// Cache preamble in system prompt (works with Anthropic prompt caching, OpenAI system messages)
+const systemMsg = { role: 'system', content: preamble };
+
+// Now every request pays only the body cost
+await llm.chat({ messages: [systemMsg, { role: 'user', content: bodyOnly }] });
+```
 
 ## What you should NOT do
 
@@ -252,6 +296,9 @@ If a critical invariant was dropped, please open an issue with the input text �
 | `src/rules/abbreviations.ts` | General + domain abbreviations |
 | `src/scn/prompt.ts` | System prompt for Tier 2 (model-assisted) |
 | `src/scn/serializer.ts` | SCN output format |
+| `src/tier3/vocabulary.ts` | Verified 1-token symbol pool (Greek letters, arrows) |
+| `src/tier3/hyper-scn.ts` | Tier 3 deterministic compressor (SCN → HyperSCN) |
+| `src/tier3/preamble.ts` | Self-describing LLM decoder preamble |
 | `src/adapters/ollama.ts` | Ollama HTTP adapter |
 | `src/adapters/openai.ts` | OpenAI-compatible HTTP adapter |
 | `src/tokenizer/counter.ts` | GPT BPE token counting |
@@ -297,6 +344,11 @@ const n = tokens(text);
 // Deep compression (async, needs model)
 import { compressWithModel, ollamaAdapter } from 'c2si';
 const out = await compressWithModel(text, ollamaAdapter({ model: 'llama3.2:3b' }));
+
+// Tier 3: maximum compression for high-volume agents (async, needs model)
+import { compressHyper } from 'c2si';
+const r = await compressHyper(text, adapter);
+// r.text has preamble+content ready to send; r.preamble/r.bodyOnly for caching
 ```
 
 That's the entire library. No hidden APIs. No magic configuration. Drop `compress()` before your LLM call and ship it.

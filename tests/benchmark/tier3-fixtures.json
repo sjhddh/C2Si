@@ -1,0 +1,83 @@
+{
+  "version": "c2si-tier3-benchmark-v0.1",
+  "description": "Tier 3 (HyperSCN) benchmark. Inputs are Tier 2 SCN strings. Each case verifies: (1) critical invariants survive, (2) minimum compression ratio met, (3) output is deterministic. Modality markers (NEG:, POSS:, OBL:) and all entities, numbers, dates must pass through unchanged.",
+  "hardThresholds": {
+    "minRatioOverall": 1.15,
+    "invariantViolationTolerance": 0,
+    "determinismRequired": true
+  },
+  "cases": [
+    {
+      "id": "T3-BASIC-001",
+      "category": "basic_aliasing",
+      "scn": "RAISE a0:$a a1:rates\nRAISE a0:$b a1:yields\nRAISE a0:$c a1:premiums\nRAISE a0:$d a1:spreads",
+      "mustContain": ["$a", "$b", "$c", "$d", "rates", "yields", "premiums", "spreads"],
+      "mustContainLegend": ["=RAISE"],
+      "minRatio": 1.2,
+      "note": "Single repeated predicate (RAISE x4) should be aliased"
+    },
+    {
+      "id": "T3-NEG-001",
+      "category": "negation_preservation",
+      "scn": "NEG:APPROVE a0:committee a1:budget\nAPPROVE a0:board a1:hiring\nNEG:APPROVE a0:team a1:proposal\nAPPROVE a0:ceo a1:acquisition\nNEG:APPROVE a0:investors a1:deal",
+      "mustContain": ["NEG:", "committee", "budget", "proposal", "deal"],
+      "mustContainLegend": ["=APPROVE"],
+      "minRatio": 1.1,
+      "note": "NEG: modality marker preserved as prefix; APPROVE can alias but remains semantically reachable via legend"
+    },
+    {
+      "id": "T3-MOD-001",
+      "category": "modality_preservation",
+      "scn": "POSS:RAISE a0:Fed a1:rates tm:June\nOBL:COMPLY a0:firms a1:regulations\nNEG:APPROVE a0:board a1:merger\nPOSS:ANNOUNCE a0:CEO a1:departure\nOBL:DISCLOSE a0:companies a1:material-info",
+      "mustContain": ["POSS:", "OBL:", "NEG:", "Fed", "regulations", "merger", "CEO", "material-info"],
+      "mustContainLegend": [],
+      "minRatio": 1.1,
+      "note": "All modality markers (POSS, OBL, NEG) preserved verbatim"
+    },
+    {
+      "id": "T3-ENT-001",
+      "category": "entity_preservation",
+      "scn": "@E1=European-Central-Bank(type:org)\n@E2=Federal-Reserve(type:org)\nANNOUNCE a0:$a a1:policy\nANNOUNCE a0:$b a1:decision\nANNOUNCE a0:$a a1:update\nANNOUNCE a0:$b a1:statement",
+      "mustContain": ["@E1=European-Central-Bank", "@E2=Federal-Reserve", "$a", "$b", "policy", "decision", "update", "statement"],
+      "mustContainLegend": ["=ANNOUNCE"],
+      "minRatio": 1.15,
+      "note": "@E and $ entity definitions + references all preserved"
+    },
+    {
+      "id": "T3-NUM-001",
+      "category": "number_preservation",
+      "scn": "RAISE a0:$a a1:rates a2:+50bp\nRAISE a0:$b a1:yields a2:+25bp\nRAISE a0:$c a1:premiums a2:+10bp\nDECLINE a0:EUR-USD a1:-2.1%\nDECLINE a0:GBP-USD a1:-1.8%\nDECLINE a0:JPY-USD a1:-0.9%",
+      "mustContain": ["+50bp", "+25bp", "+10bp", "-2.1%", "-1.8%", "-0.9%", "EUR-USD", "GBP-USD", "JPY-USD"],
+      "mustContainLegend": ["=RAISE", "=DECLINE"],
+      "minRatio": 1.2,
+      "note": "Numbers, percentages, and currency pairs preserved exactly"
+    },
+    {
+      "id": "T3-TIME-001",
+      "category": "time_preservation",
+      "scn": "ANNOUNCE a0:$a a1:Q1-results tm:March-15\nANNOUNCE a0:$b a1:Q2-results tm:June-30\nANNOUNCE a0:$c a1:Q3-results tm:September-30\nANNOUNCE a0:$d a1:Q4-results tm:December-31",
+      "mustContain": ["tm:March-15", "tm:June-30", "tm:September-30", "tm:December-31", "Q1-results", "Q2-results", "Q3-results", "Q4-results"],
+      "mustContainLegend": ["=ANNOUNCE"],
+      "minRatio": 1.15,
+      "note": "tm: role prefix kept + all date values preserved"
+    },
+    {
+      "id": "T3-DISCOURSE-001",
+      "category": "discourse_preservation",
+      "scn": "RAISE a0:$a a1:rates a2:+50bp\n→CAUSE: EXCEED a0:inflation a1:target tm:6mo\n→RESULT: DECLINE a0:EUR-USD a1:-2.1%\nANNOUNCE a0:$b a1:response\n→CONTRAST: HOLD a0:Fed a1:rates\nRAISE a0:$c a1:yield-cap a2:+10bp\n→SEQUENCE: DECLINE a0:JPY a1:-0.5%",
+      "mustContain": ["→CAUSE:", "→RESULT:", "→CONTRAST:", "→SEQUENCE:", "inflation", "target", "EUR-USD", "Fed", "yield-cap", "JPY"],
+      "mustContainLegend": [],
+      "minRatio": 1.15,
+      "note": "Discourse markers →CAUSE/→RESULT/→CONTRAST/→SEQUENCE preserved"
+    },
+    {
+      "id": "T3-MIXED-001",
+      "category": "combined_stress",
+      "scn": "@E1=European-Central-Bank(type:org)\nANNOUNCE a0:$a a1:monetary-policy tm:Wednesday\nRAISE a0:$a a1:rates a2:+50bp tm:Thursday mn:unexpected cs:inflation\nSTATE a0:chairman a1:hawkish-tone\nEXPECT a0:$a a1:more-hikes tm:H2-2026\nRAISE a0:Fed a1:rates a2:+25bp tm:last-month\nSTATE a0:Powell a1:committed-to-target\nRAISE a0:BOJ a1:yield-cap a2:+10bp\nSTATE a0:Kuroda a1:flexible-policy\nNEG:APPROVE a0:ECB-council a1:coordinated-intervention\nPOSS:RAISE a0:BOE a1:rates tm:August\n→CAUSE: EXCEED a0:inflation a1:target\n→RESULT: DECLINE a0:EUR-USD a1:-2.1%\n→RESULT: DECLINE a0:JPY a1:-1.3%",
+      "mustContain": ["NEG:", "POSS:", "+50bp", "+25bp", "+10bp", "-2.1%", "-1.3%", "Fed", "Powell", "BOJ", "Kuroda", "BOE", "ECB-council", "→CAUSE:", "→RESULT:"],
+      "mustContainLegend": ["=RAISE"],
+      "minRatio": 1.3,
+      "note": "Full stress test: entities + numbers + dates + modality + discourse + multiple repeated predicates"
+    }
+  ]
+}
